@@ -9,6 +9,18 @@ app.get('/', (req, res) => {
 
 //*/
 
+//* SOCKET.IO
+
+io.on('connection', socket => {
+	console.log("uc");
+
+	socket.on('disconnect', () => {
+		console.log('ud');
+	});
+});
+
+//*/
+
 //* SERVER
 
 const _PORT_ = 3001;

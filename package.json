@@ -3,6 +3,12 @@
   "version": "0.0.1",
   "description": "This is the backend for Grapevine, the fun party game with a retro design",
   "dependencies": {
-    "express": "^4.16.2"
-  }
+    "express": "^4.16.2",
+    "socket.io": "^2.0.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/clevergrant/grapevine-api.git"
+  },
+  "license": "Apache-2.0"
 }
