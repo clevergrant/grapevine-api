@@ -1,0 +1,8 @@
+{
+  "name": "grapevine-api",
+  "version": "0.0.1",
+  "description": "This is the backend for Grapevine, the fun party game with a retro design",
+  "dependencies": {
+    "express": "^4.16.2"
+  }
+}
