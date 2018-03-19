@@ -130,8 +130,6 @@ io.on('connection', socket => {
 
 		console.log(connector.player.name + ' wants to join ' + connector.code)
 
-		socket.join(connector.code);
-
 		let reqGame = currentGames[connector.code];
 		playerInterface[socket.id] = connector.player.name;
 		roomInterface[socket.id] = connector.code;
@@ -142,14 +140,21 @@ io.on('connection', socket => {
 
 				if (reqGame.playerNames.length < 8) {
 
-
 					let newPlayer = new Player(socket.id, connector.player);
 
 					reqGame.setColor(newPlayer);
 					reqGame.addPlayer(newPlayer);
 
-					socket.to(connector.code).emit('player joined', newPlayer);
+					let link = {
+						code: connector.code,
+						player: newPlayer
+					};
 
+					socket.emit('link', link);
+
+					socket.join(connector.code);
+
+					socket.to(connector.code).emit('player joined', newPlayer);
 
 				} else socket.emit('refuse', 'Game is full.');
 
