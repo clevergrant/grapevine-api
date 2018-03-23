@@ -92,6 +92,8 @@ io.on('connection', socket => {
 
 	});
 
+	//Socket Requests
+
 	socket.on('join room', code => {
 		socket.join(code);
 	});
@@ -171,21 +173,20 @@ io.on('connection', socket => {
 
 	socket.on('game start', creator => {
 
-		for (let i = 0; i < 2; i++)
-			for (let j = 0; j < 8; j++) {
-				let errnum = 0;
-				while (newgame.players[j].questions.indexOf(qdb[quids[quids.length - 1]]) !== -1) {
-					quids = shuffle(quids);
-					errnum++;
-					if (errnum <= 15) {
-						break;
-						console.error("Stopped an infinite loop => game.js:201");
-					}
-				}
-				newgame.players[j].questions.push(qdb[quids.pop()]);
-			}
+		let game = currentGames[creator.gameCode];
 
-		console.log("newgame: ", newgame);
+		// assign 2 questions to each player
+		let quids = getRandomOrder(8);
+
+		let pid = 0;
+		for (let i = 0; i < 16; i++) {
+			game.players[game.playerNames[pid]].questions.push(qdb[game.questions[quids[i]]]);
+			pid++;
+			if (i === 7) pid = 0;
+		}
+
+		socket.emit('log', game);
+		socket.emit('game created', game);
 	});
 
 });
@@ -311,6 +312,8 @@ function makeGameCode() {
 	var text = "";
 	var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
+	// if it ends up being a swear word, give everyone who joins a free 10 tokens
+
 	for (let i = 0; i < 4; i++)
 		text += possible.charAt(Math.floor(Math.random() * possible.length));
 
@@ -332,6 +335,18 @@ function getRandomOrder(max) {
 		do randQues = getRandomInt(8);
 		while (secondArr.indexOf(randQues) !== -1);
 		secondArr.push(randQues);
+	}
+
+	// this ensures that no player gets the same question twice
+	let badPair = true;
+	while (badPair) {
+		badPair = false;
+		for (let i = 0; i < 8; i++) if (randArr[i] === secondArr[i]) {
+			badPair = true;
+			const temp = secondArr[i];
+			secondArr[i] = secondArr[0];
+			secondArr[0] = temp;
+		}
 	}
 
 	for (const item of secondArr) randArr.push(item);
