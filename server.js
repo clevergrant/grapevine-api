@@ -29,7 +29,6 @@ let currentRooms = {};
 
 io.on('connection', socket => {
 	idle++;
-	console.log("Idle connections: ", idle);
 
 	socket.emit('log', 'Server connected');
 
@@ -39,7 +38,7 @@ io.on('connection', socket => {
 		idle--;
 
 		// Log idle connections
-		console.log("Idle connections: ", idle);
+		// console.log("Idle connections: ", idle);
 
 		// When a Host disconnects
 		if (socket.id in hostInterface) {
@@ -100,7 +99,8 @@ io.on('connection', socket => {
 
 	socket.on('request host', () => {
 
-		const gameCode = makeGameCode();
+		// const gameCode = makeGameCode();
+		const gameCode = 'AAAA';
 
 		hostInterface[socket.id] = gameCode;
 
@@ -185,8 +185,21 @@ io.on('connection', socket => {
 			if (i === 7) pid = 0;
 		}
 
-		socket.emit('log', game);
 		socket.emit('game created', game);
+
+		//send questions to players
+
+		for (player in game.players) {
+			const playerObj = game.players[player];
+			socket.to(playerObj.socketId).emit('assign questions', playerObj);
+		}
+
+	});
+
+	socket.on('questions answered', (player, code) => {
+		let game = currentGames[code];
+		game.players[player.name] = player;
+		socket.to(code).emit('player answered', player);
 	});
 
 });
