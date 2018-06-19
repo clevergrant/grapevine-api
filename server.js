@@ -99,11 +99,14 @@ io.on('connection', socket => {
 
 	socket.on('request host', () => {
 
+		// Set the game room code
 		// const gameCode = makeGameCode();
 		const gameCode = 'AAAA';
 
+		// Store the game code along with the host's socket ID in the host interface object
 		hostInterface[socket.id] = gameCode;
 
+		// Get a list of questions
 		let quids = getRandomOrder(8);
 
 		let qarr = [];
@@ -113,12 +116,16 @@ io.on('connection', socket => {
 
 		qarr = shuffle(qarr);
 
+		// Create a new game object using the game code and the new array of question IDs
 		let newgame = new Game(gameCode, qarr);
 
+		// Store the game in the currentGames array, indexed by game code
 		currentGames[gameCode] = newgame;
 
+		// secure the connection in a new room named after the game code
 		socket.join(gameCode);
 
+		// Tell the host that the game has been created
 		socket.emit('host created', gameCode);
 
 		// console.log('playerInterface:', playerInterface);
@@ -212,6 +219,13 @@ class Game {
 	constructor(code, questionArr) {
 		this.code = code;
 		this.questions = questionArr;
+
+		this.questionText = [];
+
+		for (let key in questionArr) {
+			this.questionText.push({ key: key, text: qdb[key]});
+		}
+
 		this.players = {};
 		this.playerNames = [];
 		this.colors = {
