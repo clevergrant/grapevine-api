@@ -182,7 +182,30 @@ io.on('connection', socket => {
 
 		let game = currentGames[creator.gameCode];
 
+		// create a new array based on the question set
+		let gameQuestions = qdb;
+
+		//shuffle game questions array so people get different questions each time they play 
+		//maybe not necessary...
+		shuffle(gameQuestions);
+
 		// assign 2 questions to each player
+		for (player in game.players) {
+			
+			// pick a question from the array of questions
+			let randomQuestion = gameQuestions[Math.floor(Math.random()*gameQuestions.length)];
+
+			// push it to the player's assigned questions
+			game.players[player].questions.push(randomQuestion);
+
+			// remove question from game question array so it won't be reassigned
+			gameQuestions = remove(gameQuestions, randomQuestion);
+
+		}
+
+
+		/* The above code should replace this part, I think...
+
 		let quids = getRandomOrder(8);
 
 		let pid = 0;
@@ -191,6 +214,8 @@ io.on('connection', socket => {
 			pid++;
 			if (i === 7) pid = 0;
 		}
+
+		*/ 
 
 		socket.emit('game created', game);
 
@@ -397,19 +422,23 @@ function shuffle(array) {
 	return array;
 }
 
+function remove(array, element) {
+    return array.filter(e => e !== element);
+}
+
 //*/
 
 //* DATA
 
 let qdb = [
-	"What's your favorite color? 0",
-	"What's your favorite food? 1",
-	"What's your favorite book? 2",
-	"What's your favorite sport? 3",
-	"What's your favorite song? 4",
-	"What's your favorite movie? 5",
-	"What's your favorite game? 6",
-	"What's your favorite show? 7"
+	"What's your favorite color?",
+	"What's your favorite food?",
+	"What's your favorite book?",
+	"What's your favorite sport?",
+	"What's your favorite song?",
+	"What's your favorite movie?",
+	"What's your favorite game?",
+	"What's your favorite show?"
 ];
 
 //*/
