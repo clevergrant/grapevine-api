@@ -109,15 +109,20 @@ io.on('connection', socket => {
 		// Get a list of questions
 		let quids = getRandomOrder(8);
 
-		let qarr = [];
+		let quidarr = [];
 
 		for (let i = 0; i < quids.length / 2; i++)
-			qarr.push(quids[i]);
+			quidarr.push(quids[i]);
 
-		qarr = shuffle(qarr);
+		quidarr = shuffle(quidarr);
+
+		let quarr = [];
+
+		for (let quid of quidarr)
+			quarr.push(qdb[quid]);
 
 		// Create a new game object using the game code and the new array of question IDs
-		let newgame = new Game(gameCode, qarr);
+		let newgame = new Game(gameCode, quarr);
 
 		// Store the game in the currentGames array, indexed by game code
 		currentGames[gameCode] = newgame;
@@ -135,35 +140,47 @@ io.on('connection', socket => {
 
 	});
 
-	socket.on('request player', connector => {
+	socket.on('request player', rp => {
 
-		console.log(connector.player.name + ' wants to join ' + connector.code)
+		console.log(rp.name + ' wants to join ' + rp.code)
 
-		let reqGame = currentGames[connector.code];
-		playerInterface[socket.id] = connector.player.name;
-		roomInterface[socket.id] = connector.code;
+		// Create a local variable for the requested game
+		let reqGame = currentGames[rp.code];
 
+		// Update player interface and room interface
+		playerInterface[socket.id] = rp.name;
+		roomInterface[socket.id] = rp.code;
+
+		// if the game exists,
 		if (typeof reqGame !== 'undefined') {
 
-			if (reqGame.playerNames.indexOf(connector.player.name) === -1) {
+			// and if the player is not already in the game,
+			if (reqGame.playerNames.indexOf(rp.name) === -1) {
 
+				// and if there's not already 8 players,
 				if (reqGame.playerNames.length < 8) {
 
-					let newPlayer = new Player(socket.id, connector.player);
+					// create a new player object
+					let newPlayer = new Player(socket.id, rp.name);
 
+					// give the new player a color and add them to the game
 					reqGame.setColor(newPlayer);
 					reqGame.addPlayer(newPlayer);
 
-					let link = {
-						code: connector.code,
-						player: newPlayer
-					};
+					// tell the client that it joined the room
+					socket.emit('link', {
+						code: rp.code,
+						color: newPlayer.color
+					});
 
-					socket.emit('link', link);
+					// join the room of the game that the player requested
+					socket.join(rp.code);
 
-					socket.join(connector.code);
-
-					socket.to(connector.code).emit('player joined', newPlayer);
+					// tell the room that a new player joined
+					socket.to(rp.code).emit('player joined', {
+						name: newPlayer.name,
+						color: newPlayer.color
+					});
 
 				} else socket.emit('refuse', 'Game is full.');
 
@@ -178,35 +195,97 @@ io.on('connection', socket => {
 
 	});
 
-	socket.on('game start', creator => {
+	socket.on('game start', code => {
 
-		let game = currentGames[creator.gameCode];
+		// get the game
+		let game = currentGames[code];
 
 		// assign 2 questions to each player
 		let quids = getRandomOrder(8);
 
 		let pid = 0;
 		for (let i = 0; i < 16; i++) {
-			game.players[game.playerNames[pid]].questions.push(qdb[game.questions[quids[i]]]);
+			game.players[game.playerNames[pid]].questions.push(game.questions[quids[i]]);
 			pid++;
 			if (i === 7) pid = 0;
 		}
 
-		socket.emit('game created', game);
-
 		//send questions to players
-
-		for (player in game.players) {
-			const playerObj = game.players[player];
-			socket.to(playerObj.socketId).emit('assign questions', playerObj);
+		for (let playerKey in game.players) {
+			socket.to(game.players[playerKey].socketId)
+				.emit('assign questions', game.players[playerKey].questions);
 		}
 
 	});
 
-	socket.on('questions answered', (player, code) => {
+	socket.on('questions answered', qa => {
+		currentGames[qa.code].players[qa.name].answers = qa.answers;
+		socket.to(qa.code).emit('player answered', {
+			color: currentGames[qa.code].players[qa.name].color
+		});
+	});
+
+	socket.on('all ready', code => {
+		// get the current game
 		let game = currentGames[code];
-		game.players[player.name] = player;
-		socket.to(code).emit('player answered', player);
+
+		// Populate the voting round object with arrays that have questions as the key
+		for (let question of game.questions)
+			game.voteRound[question] = [];
+
+		// Add all the answers to the appropriate questions
+		for (let playerKey in game.players) {
+			game.voteRound[game.players[playerKey].questions[0]].push({
+				name: game.players[playerKey].name,
+				color: game.players[playerKey].color,
+				answer: game.players[playerKey].answers[0]
+			});
+			game.voteRound[game.players[playerKey].questions[1]].push({
+				name: game.players[playerKey].name,
+				color: game.players[playerKey].color,
+				answer: game.players[playerKey].answers[1]
+			});
+		}
+
+		// Send for the votes for each questions' answers
+		askQuestion(
+			socket,
+			{
+				code: code,
+				question: game.questions[0],
+				answers: game.voteRound[game.questions[0]],
+				round: 0
+			}
+		);
+	});
+
+	socket.on('player vote', pv => {
+		currentGames[pv.code].players[pv.name].points++;
+
+		// TODO:
+		// give 20 points to winning answer per player who voted for their answer
+		// give 10 points to losing answer per player who voted for their answer
+		// give 5 points to each player who guessed the winning answer
+
+		currentGames[pv.code].votes++;
+
+		if (currentGames[pv.code].votes >= 8) {
+			let nextRound = pv.round + 1;
+
+			if (nextRound >= 8) {
+
+				socket.to(pv.code).emit('game over', )
+			}
+			else askQuestion(
+				socket,
+				{
+					code: code,
+					question: game.questions[nextRound],
+					answers: game.voteRound[game.questions[nextRound]],
+					round: nextRound
+				}
+			);
+		}
 	});
 
 });
@@ -223,7 +302,7 @@ class Game {
 		this.questionText = [];
 
 		for (let key in questionArr) {
-			this.questionText.push({ key: key, text: qdb[key]});
+			this.questionText.push({ key: key, text: qdb[key] });
 		}
 
 		this.players = {};
@@ -238,6 +317,9 @@ class Game {
 			indigo: true,
 			violet: true
 		}
+
+		this.voteRound = [];
+		this.votes = 0;
 	}
 
 	addPlayer(newPlayer) {
@@ -266,9 +348,9 @@ class Game {
 }
 
 class Player {
-	constructor(socketId, player) {
+	constructor(socketId, name) {
 		this.socketId = socketId;
-		this.name = player.name;
+		this.name = name;
 		this.color = '';
 		this.points = 0;
 		this.questions = [];
@@ -395,6 +477,10 @@ function shuffle(array) {
 		array[randomIndex] = temporaryValue;
 	}
 	return array;
+}
+
+function askQuestion(socket, voteObj) {
+	socket.to(voteObj.code).emit('ask vote', voteObj);
 }
 
 //*/
