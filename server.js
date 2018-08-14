@@ -9,7 +9,9 @@ var express = require('express'),
 	server = require('http').createServer(app),
 	io = require('socket.io').listen(server)
 
-server.listen(process.env.PORT || 3001);
+server.listen(process.env.PORT || 3001, () => {
+	console.log('listening for client...');
+});
 
 // const _PORT_ = 3001;
 // const PORT = 3001;
@@ -35,7 +37,7 @@ let hostInterface = {};
 let idle = 0;
 let currentRooms = {};
 
-io.on('connection', socket => {
+io.sockets.on('connection', socket => {
 	idle++;
 
 	socket.emit('log', 'Server connected');
