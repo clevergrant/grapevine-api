@@ -1,15 +1,22 @@
-let app = require('express')();
-let http = require('http').Server(app);
-var io = require('socket.io')(http);
+// let app = require('express')();
+// let http = require('http').Server(app);
+// var io = require('socket.io')(http);
 
 //* SERVER
 
-// const _PORT_ = 3001;
-const PORT = 3001;
+var express = require('express'),
+	app = express(),
+	server = require('http').createServer(app),
+	io = require('socket.io').listen(server)
 
-http.listen(PORT, () => {
-	console.log('listening on *:' + PORT);
-});
+server.listen(process.env.PORT || 3001);
+
+// const _PORT_ = 3001;
+// const PORT = 3001;
+
+// http.listen(PORT, () => {
+// 	console.log('listening on *:' + PORT);
+// });
 
 //*/
 
