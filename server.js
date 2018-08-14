@@ -4,10 +4,11 @@ var io = require('socket.io')(http);
 
 //* SERVER
 
-const _PORT_ = 3001;
+// const _PORT_ = 3001;
+const PORT = 3001;
 
-http.listen(_PORT_, () => {
-	console.log('listening on *:' + _PORT_);
+http.listen(PORT, () => {
+	console.log('listening on *:' + PORT);
 });
 
 //*/
